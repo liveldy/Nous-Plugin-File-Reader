@@ -9,7 +9,8 @@ import { capabilities } from '../sdk/contract.mjs';
 
 const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const dist = path.join(root, 'dist');
-const bundlePath = path.join(dist, 'app.nous.file-reader-1.0.0.nous-plugin.json');
+const source = JSON.parse(await readFile(path.join(root, 'manifest.json'), 'utf8'));
+const bundlePath = path.join(dist, `app.nous.file-reader-${source.version}.nous-plugin.json`);
 const bundle = JSON.parse(await readFile(bundlePath, 'utf8'));
 
 const HOST_VERSION = '1.3.2';
@@ -54,7 +55,24 @@ fetch('document.html', { cache: 'no-store' }).then((r) => r.text()).then((text) 
   html = text;
   if (framed) render();
 }).catch((e) => console.error('harness: 读取文档失败', e));
-const store = new Map();
+// 宿主 storage 是键值表，读回来的是当初写进去的值本身；这里用 localStorage 兜住，刷新页面也还在
+// （file:// 下 localStorage 不可用时退回内存表，那种情况下跨刷新就靠页面不重载）。
+const memory = new Map();
+const backing = (() => {
+  try { localStorage.setItem('harness:probe', '1'); localStorage.removeItem('harness:probe'); return localStorage; }
+  catch (e) { return null; }
+})();
+const store = {
+  key: (k) => 'harness:' + k,
+  has: (k) => (backing ? backing.getItem(store.key(k)) !== null : memory.has(k)),
+  get: (k) => {
+    if (!backing) return memory.has(k) ? memory.get(k) : null;
+    const raw = backing.getItem(store.key(k));
+    return raw === null ? null : JSON.parse(raw);
+  },
+  set: (k, v) => { if (backing) backing.setItem(store.key(k), JSON.stringify(v)); else memory.set(k, v); },
+  remove: (k) => { if (backing) backing.removeItem(store.key(k)); else memory.delete(k); },
+};
 addEventListener('message', function (event) {
   const value = event.data;
   if (event.source !== frame.contentWindow || !value || typeof value !== 'object') return;
@@ -67,9 +85,9 @@ addEventListener('message', function (event) {
   const fail = (code, message) => send({ protocol: PROTOCOL, nonce: NONCE, kind: 'result', id: value.id, error: { code: code, message: message } });
   const params = value.params || {};
   if (value.method === 'clipboard.write') { window.__clip = params.text; window.__clipLen = (params.text || '').length; reply({ ok: true }); return; }
-  if (value.method === 'storage.get') { reply({ value: store.has(params.key) ? store.get(params.key) : null }); return; }
+  if (value.method === 'storage.get') { reply(store.has(params.key) ? store.get(params.key) : null); return; }
   if (value.method === 'storage.set') { store.set(params.key, params.value); reply({ ok: true }); return; }
-  if (value.method === 'storage.remove') { store.delete(params.key); reply({ ok: true }); return; }
+  if (value.method === 'storage.remove') { store.remove(params.key); reply({ ok: true }); return; }
   if (value.method === 'external.open') { window.__opened = params.url; reply({ ok: true }); return; }
   if (value.method === 'host.info') { reply({ platform: '${PLATFORM}', version: '${HOST_VERSION}', api: '${profile.api}', locale: 'zh-CN', theme: '${theme}' }); return; }
   if (value.method === 'host.capabilities') { reply(CONTEXT); return; }

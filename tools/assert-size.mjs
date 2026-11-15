@@ -6,7 +6,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
-const file = path.join(root, 'dist', 'app.nous.file-reader-1.0.0.nous-plugin.json');
+const source = JSON.parse(await readFile(path.join(root, 'manifest.json'), 'utf8'));
+const file = path.join(root, 'dist', `app.nous.file-reader-${source.version}.nous-plugin.json`);
 const LIMIT_BYTES = 4 * 1024 * 1024;
 const LIMIT_FILES = 256;
 
@@ -15,7 +16,6 @@ const text = await readFile(file, 'utf8');
 const bundle = JSON.parse(text);
 const files = Object.keys(bundle.files);
 // 打包会按文件表重建资源清单，这里与源清单对照，确保两边没有漏项
-const source = JSON.parse(await readFile(path.join(root, 'manifest.json'), 'utf8'));
 const declared = source.resources || [];
 
 const problems = [];

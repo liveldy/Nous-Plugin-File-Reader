@@ -25,10 +25,20 @@
   <aside class="rail" aria-label="文件列表">
     <div class="rail-head"><span id="railCount">没有文件</span></div>
     <ul class="file-list" id="fileList"></ul>
-    <button class="rail-drop" id="dropHint" type="button">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L8 8m4-4 4 4M5 16v3.5h14V16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span>拖入文件</span>
-    </button>
+    <section class="rail-history" id="historyBox" aria-label="最近打开" hidden>
+      <div class="rail-sub">
+        <span>最近打开</span>
+        <button class="rail-clear" id="historyClear" type="button">清空</button>
+      </div>
+      <ul class="history-list" id="historyList"></ul>
+    </section>
+    <div class="rail-foot">
+      <button class="rail-drop" id="dropHint" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L8 8m4-4 4 4M5 16v3.5h14V16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>拖入文件</span>
+      </button>
+      <button class="rail-about" id="aboutBtn" type="button">关于</button>
+    </div>
   </aside>
   <section class="stage" aria-label="阅读区">
     <div class="stage-head" id="stageHead" hidden></div>
@@ -43,6 +53,7 @@
 <script src="lib/hl.js"></script>
 <script src="lib/md.js"></script>
 <script src="lib/structured.js"></script>
+<script src="lib/htmlview.js"></script>
 <script src="lib/codeview.js"></script>
 <script src="lib/image.js"></script>
 <script src="lib/audio.js"></script>

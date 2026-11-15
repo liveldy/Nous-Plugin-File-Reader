@@ -1,6 +1,6 @@
 {
   "name": "nous-plugin-file-reader",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "commonjs",
   "description": "破晓文件解析阅读器 · Nous 插件。ui/ 是随包页面，sdk/ 是公开插件 SDK 的本地副本，tools/ 是预览与本机检查脚本。",

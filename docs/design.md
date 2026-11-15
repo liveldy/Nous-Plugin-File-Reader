@@ -14,7 +14,8 @@
 | 用 `<video>` / `<audio>` 播 | `media-src` 落到 `default-src none`，静默失败 | 音频 `decodeAudioData` 解 PCM 自己画波形、Web Audio 播；视频 WebCodecs 解帧画到 canvas |
 | 用 `showSaveFilePicker` 另存 | 抛 `SecurityError` | 不提供另存；编辑结果走宿主剪贴板（≤ 30000 字符） |
 | 用 `<a download>` 导出 | 被 sandbox 拦 | 同上，界面里如实说明 |
-| `localStorage` | 不可用 | 走宿主 `storage.get/set`（64 KiB） |
+| 用 `<iframe srcdoc>` 渲染 HTML | `frame-src 'none'` | 自己按白名单重建静态结构（见下），不执行也不加载 |
+| `localStorage` | 不可用 | 走宿主 `storage.get/set`（64 KiB）；`storage.get` 回的是当初 `set` 进去的那个值本身，不是 `{ value }` |
 | 发网络请求 | `connect-src 'none'` | 全部解析在本地完成；外链交 `external.open` |
 | 字体 | `font-src data:` | Geist / Geist Mono 以 `@font-face` + data URL 内联进包 |
 
@@ -38,6 +39,13 @@
 - **ZIP 与 Office**：读中央目录，按需解压单个条目；docx 走 `w:p` / `w:tbl`，xlsx 走 `sharedStrings` + `sheet*.xml`，pptx 按幻灯片抽文本。
 - **PDF**：解析 xref 与对象，`FlateDecode` 解流，从内容流里取文本操作符。只有文本层，扫描件按“未抽到”处理并给出说明。
 - **三维**：STL / OBJ / PLY / GLB 只取点与包围盒；面数少于 2400 时铺三角面加描边并按深度排序，面多就退化成点云。
+- **HTML 阅读**：`ui/lib/htmlview.js` 用 `DOMParser` 解析，再逐节点按白名单重建：`h1–h6`、`p`、`ul/ol/li`、`table`（保留 `colspan`/`rowspan`）、`pre/code`、`blockquote`、`hr`、`dl`、`details` 留下；`a` 只留 `http(s)` 并转成 `data-url`，在外部浏览器打开；`img` 只留 `data:image/`，远程图降级成一行说明。`script/style/link/iframe/form/svg/canvas` 等直接丢弃。节点上限 20000，超过就截断并在文末说明。不用 `innerHTML` 塞原文，也不碰原文档的事件与样式属性。
+
+## 解压、历史与关于（1.1.0）
+
+- **解压到列表**：沙箱没有写盘通道，所以「解压」的出口是文件列表。ZIP 的「解压全部」与条目头的「解压这条」把条目读成 `Uint8Array`，包成 `File`（保留原路径做名字，同名不同目录不会撞车），再走一遍 `makeEntry` 进 `state.files`，于是每个条目都能用现成的视图打开。单次上限 64 MB / 300 条，超出部分在提示里说明；单条解压后直接跳过去。
+- **最近打开**：`select()` 时把 `{名字, 大小, 类别, 时间}` 写进宿主 `storage`（键 `recent-files`，最多 40 条，列表里显示最近 8 条）。只记指针不存内容——文件本身留在磁盘上，重启后点历史里的条目会提示重新选一次，因为沙箱拿不到路径。删除单条与清空都同步回 `storage`。宿主能力要等 `init` 之后才存在，所以读写都挂在 `NousPlugin.ready` 之后再做。
+- **关于**：类型清单来自 `DawnDetect.catalog()`，与识别表同源，不会和实际支持的格式走偏；版本行取 `APP_VERSION` / `APP_API` 与 `context.hostVersion` / `context.platform`。
 
 ## 界面
 
@@ -66,3 +74,6 @@
 - PDF 只抽文本层，不做版面还原，不渲染图像。
 - docx / pptx 只取文字，样式、图片、表格边框不还原。
 - 二进制视图只解释常见签名；其余显示偏移与字节。
+- HTML 阅读视图是重建出来的静态版式，不是原页面的样子：没有脚本、没有样式表、没有远程图片与视频，`<iframe>` 与表单也不渲染。
+- ZIP 解压只到列表（内存文件），不写盘；单次 64 MB / 300 条。
+- 「最近打开」只记名字与大小，不存内容；重启后点记录仍需重新选择文件。

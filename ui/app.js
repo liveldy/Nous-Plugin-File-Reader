@@ -3,7 +3,11 @@
   'use strict';
 
   const T = DawnText;
-  const state = { files: [], activeId: null, viewer: null, seq: 0 };
+  const state = { files: [], activeId: null, viewer: null, seq: 0, history: [], about: false };
+  const APP_VERSION = '1.1.0';
+  const APP_API = '1.3';
+  const HISTORY_KEY = 'recent-files';
+  const HISTORY_MAX = 40;
 
   const $ = (sel) => document.querySelector(sel);
   const el = (tag, cls, text) => {
@@ -62,29 +66,189 @@
   }
 
   /* ---------------- 文件收口 ---------------- */
+  function historyKey(name, size) { return name + '\u0000' + size; }
+
+  function fmtWhen(ms) {
+    if (!ms) return '';
+    const d = new Date(ms);
+    const diff = (Date.now() - ms) / 1000;
+    if (diff < 60) return '刚刚';
+    if (diff < 3600) return Math.floor(diff / 60) + ' 分钟前';
+    const today = new Date();
+    const hhmm = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    if (d.toDateString() === today.toDateString()) return '今天 ' + hhmm;
+    return (d.getMonth() + 1) + ' 月 ' + d.getDate() + ' 日';
+  }
+
+  function renderHistory() {
+    const box = $('#historyBox');
+    const list = $('#historyList');
+    if (!box || !list) return;
+    list.innerHTML = '';
+    box.hidden = state.history.length === 0;
+    for (const item of state.history.slice(0, 8)) {
+      const li = el('li', 'history-item');
+      const open = el('button', 'history-open');
+      open.type = 'button';
+      open.title = item.n + ' · ' + T.bytesText(item.s) + ' · ' + fmtWhen(item.o);
+      open.setAttribute('aria-label', '打开 ' + item.n);
+      open.appendChild(el('span', 'history-name', item.n));
+      open.appendChild(el('span', 'history-time', fmtWhen(item.o)));
+      open.addEventListener('click', () => openHistory(item));
+      li.appendChild(open);
+      const del = el('button', 'history-del', '×');
+      del.type = 'button';
+      del.setAttribute('aria-label', '删除记录 ' + item.n);
+      del.addEventListener('click', (e) => { e.stopPropagation(); removeHistory(item); });
+      li.appendChild(del);
+      list.appendChild(li);
+    }
+  }
+
+  function remember(entry) {
+    const key = historyKey(entry.name, entry.size);
+    state.history = state.history.filter(h => historyKey(h.n, h.s) !== key);
+    state.history.unshift({ n: entry.name, s: entry.size, k: entry.category, o: Date.now() });
+    if (state.history.length > HISTORY_MAX) state.history.length = HISTORY_MAX;
+    renderHistory();
+    saveHistory();
+  }
+
+  // 宿主能力要等 init 之后才谈得上，所以两处都先等 ready 再问 supports。
+  function saveHistory() {
+    if (!window.NousPlugin || !NousPlugin.ready) return;
+    NousPlugin.ready.then(() => {
+      if (!NousPlugin.supports('storage.set')) return;
+      return NousPlugin.request('storage.set', { key: HISTORY_KEY, value: JSON.stringify(state.history) });
+    }).catch(() => { });
+  }
+
+  function loadHistory() {
+    if (!window.NousPlugin || !NousPlugin.ready) return;
+    NousPlugin.ready.then(() => {
+      if (!NousPlugin.supports('storage.get')) return;
+      return NousPlugin.request('storage.get', { key: HISTORY_KEY }).then((stored) => {
+        let raw = stored;
+        if (raw && typeof raw === 'object' && !Array.isArray(raw) && 'value' in raw) raw = raw.value;
+        let list = raw;
+        if (typeof raw === 'string') {
+          try { list = JSON.parse(raw); } catch (e) { list = []; }
+        }
+        if (!Array.isArray(list)) return;
+        state.history = list.filter(h => h && typeof h.n === 'string' && typeof h.s === 'number').slice(0, HISTORY_MAX);
+        renderHistory();
+      });
+    }).catch(() => { });
+  }
+
+  function removeHistory(item) {
+    const key = historyKey(item.n, item.s);
+    state.history = state.history.filter(h => historyKey(h.n, h.s) !== key);
+    renderHistory();
+    saveHistory();
+    toast('已删除这条记录');
+  }
+
+  function openHistory(item) {
+    const live = state.files.find(f => f.name === item.n && f.size === item.s);
+    if (live) { select(live.id); return; }
+    toast('重新选一次「' + item.n + '」就能打开');
+    $('#picker').click();
+  }
+
+  function clearHistory() {
+    if (!state.history.length) return;
+    state.history = [];
+    renderHistory();
+    saveHistory();
+    toast('最近打开已清空');
+  }
+
+  /* ---------------- 关于 ---------------- */
+  function hostFacts() {
+    const ctx = window.NousPlugin && NousPlugin.context;
+    const parts = ['版本 ' + APP_VERSION, 'API ' + APP_API];
+    if (ctx && ctx.hostVersion) parts.push('宿主 ' + ctx.hostVersion);
+    if (ctx && ctx.platform) parts.push(ctx.platform);
+    return parts;
+  }
+
+  function aboutNode() {
+    const box = el('div', 'about');
+
+    const head = el('div', 'about-head');
+    head.appendChild(el('h2', 'about-title', '关于'));
+    const facts = el('div', 'about-facts');
+    for (const part of hostFacts()) facts.appendChild(el('span', 'about-fact', part));
+    head.appendChild(facts);
+    box.appendChild(head);
+
+    const groups = el('div', 'about-groups');
+    for (const group of DawnDetect.catalog()) {
+      const sec = el('section', 'about-group');
+      sec.appendChild(el('h3', 'about-group-title', group.title));
+      const list = el('ul', 'about-items');
+      for (const item of group.items) {
+        const row = el('li', 'about-item');
+        row.appendChild(el('span', 'about-label', item.label));
+        row.appendChild(el('span', 'about-exts', item.exts));
+        list.appendChild(row);
+      }
+      sec.appendChild(list);
+      groups.appendChild(sec);
+    }
+    box.appendChild(groups);
+
+    const foot = el('div', 'about-foot');
+    const link = el('a', 'md-link', 'liveldy/Nous-Plugin-File-Reader');
+    link.href = '#';
+    link.dataset.url = 'https://github.com/liveldy/Nous-Plugin-File-Reader';
+    foot.appendChild(link);
+    foot.appendChild(el('span', 'about-fact', 'MIT'));
+    box.appendChild(foot);
+    bindLinks(foot);
+    return box;
+  }
+
+  function showAbout() {
+    state.about = true;
+    state.activeId = null;
+    teardown();
+    const head = $('#stageHead');
+    head.hidden = true;
+    head.innerHTML = '';
+    const body = $('#stageBody');
+    body.innerHTML = '';
+    const about = aboutNode();
+    body.appendChild(about);
+    about.scrollTop = 0;
+    renderRail();
+  }
+
+  async function makeEntry(file) {
+    const head = new Uint8Array(await file.slice(0, Math.min(file.size, 4096)).arrayBuffer());
+    const detected = DawnDetect.detect(file.name, head, file.size);
+    return {
+      id: 'f' + (++state.seq),
+      file: file,
+      name: file.name,
+      size: file.size,
+      time: file.lastModified,
+      category: detected.category,
+      format: detected.format,
+      ext: detected.ext,
+      label: detected.label,
+      head: head,
+      text: null,
+      encoding: '',
+      edited: null,
+    };
+  }
+
   async function addFiles(fileList) {
     const incoming = Array.from(fileList || []);
     if (!incoming.length) return;
-    for (const file of incoming) {
-      const head = new Uint8Array(await file.slice(0, Math.min(file.size, 4096)).arrayBuffer());
-      const detected = DawnDetect.detect(file.name, head, file.size);
-      const entry = {
-        id: 'f' + (++state.seq),
-        file: file,
-        name: file.name,
-        size: file.size,
-        time: file.lastModified,
-        category: detected.category,
-        format: detected.format,
-        ext: detected.ext,
-        label: detected.label,
-        head: head,
-        text: null,
-        encoding: '',
-        edited: null,
-      };
-      state.files.push(entry);
-    }
+    for (const file of incoming) state.files.push(await makeEntry(file));
     renderRail();
     if (!state.activeId) select(state.files[0].id);
     else toast('已加入 ' + incoming.length + ' 个文件');
@@ -112,6 +276,9 @@
     $('#railCount').textContent = count ? count + ' 个文件' : '没有文件';
     $('#clear').disabled = !count;
     $('#dropHint').hidden = count > 0;
+    document.querySelector('.rail-foot').classList.toggle('is-solo', count > 0);
+    $('#aboutBtn').classList.toggle('is-on', !!state.about);
+    $('#aboutBtn').setAttribute('aria-pressed', state.about ? 'true' : 'false');
   }
 
   function removeFile(id) {
@@ -129,10 +296,7 @@
 
   function emptyNode() {
     const box = el('div', 'empty');
-    box.appendChild(el('p', 'empty-title', '把文件放进来'));
-    const kinds = el('p', 'empty-kinds');
-    kinds.innerHTML = '文本<span>·</span>代码<span>·</span>Markdown<span>·</span>表格<span>·</span>配置<span>·</span>图像<span>·</span>音频<span>·</span>视频<span>·</span>压缩包<span>·</span>三维模型<span>·</span>二进制';
-    box.appendChild(kinds);
+    box.appendChild(el('p', 'empty-title', '拖入文件'));
     return box;
   }
 
@@ -165,7 +329,9 @@
     const entry = state.files.find(f => f.id === id);
     if (!entry) return;
     state.activeId = id;
+    state.about = false;
     renderRail();
+    remember(entry);
     teardown();
     const head = $('#stageHead');
     head.hidden = false;
@@ -245,13 +411,16 @@
       const stats = T.stats(text);
       const lines = text.split('\n');
       metaLine(entry, [entry.encoding, stats.eol, stats.lines.toLocaleString('zh-CN') + ' 行', entry.truncated ? '已截断' : '']);
+      if (options.onText) options.onText(text);
       let view = null;
       const render = (mode) => {
         if (view && view.destroy) view.destroy();
         body.innerHTML = '';
         if (mode === 'read' && options.renderRead) {
           const pane = el('div', 'read-pane');
-          pane.innerHTML = options.renderRead(entry.edited !== null ? entry.edited : text);
+          const out = options.renderRead(entry.edited !== null ? entry.edited : text, entry);
+          if (out && out.nodeType === 1) pane.appendChild(out);
+          else pane.innerHTML = out;
           body.appendChild(pane);
           bindLinks(pane);
           view = { destroy: () => { } };
@@ -330,12 +499,24 @@
       renderRead: (text) => DawnMd.render(text),
     });
 
-  MOUNTERS.html = (entry, body, tools) =>
-    mountTextLike(entry, body, tools, entry.metaRow, {
-      modes: [{ key: 'outline', label: '大纲' }, { key: 'source', label: '源码' }, { key: 'edit', label: '编辑' }],
-      initial: 'source',
+  MOUNTERS.html = (entry, body, tools) => {
+    let cache = null;
+    let cacheText = null;
+    const read = (text) => {
+      if (cacheText !== text) { cache = DawnHtml.render(text); cacheText = text; }
+      return cache;
+    };
+    return mountTextLike(entry, body, tools, entry.metaRow, {
+      modes: [{ key: 'read', label: '阅读' }, { key: 'outline', label: '大纲' }, { key: 'source', label: '源码' }, { key: 'edit', label: '编辑' }],
+      initial: 'read',
+      renderRead: (text) => read(text).node,
       renderOutline: (text) => DawnStructured.outlineView(text, true),
+      onText: (text) => {
+        const stats = read(text).stats;
+        metaLine(entry, [stats.title, stats.links ? stats.links + ' 个链接' : '', stats.images ? stats.images + ' 张图' : '', stats.skipped ? '已丢弃 ' + stats.skipped + ' 处外链' : '']);
+      },
     });
+  };
 
   MOUNTERS.xml = (entry, body, tools) =>
     mountTextLike(entry, body, tools, entry.metaRow, {
@@ -587,10 +768,47 @@
     const totalSize = zip.entries.reduce((s, e) => s + e.size, 0);
     metaLine(entry, [zip.entries.length + ' 个条目', T.bytesText(totalSize)]);
 
+    // 沙箱里没有写盘通道，解压的出口是左侧文件列表：解出来的条目照常交给各类型视图打开。
+    const EXTRACT_BYTES = 64 * 1024 * 1024;
+    const EXTRACT_FILES = 300;
+    let extracting = false;
+    const extract = async (items) => {
+      if (extracting) { toast('还在解压，稍等一下', 'warn'); return; }
+      const files = items.filter(e => !/\/$/.test(e.name));
+      if (!files.length) { toast('没有可解压的条目', 'warn'); return; }
+      const picked = [];
+      let bytes = 0;
+      for (const item of files.slice(0, EXTRACT_FILES)) {
+        if (bytes + item.size > EXTRACT_BYTES) break;
+        bytes += item.size;
+        picked.push(item);
+      }
+      if (!picked.length) { toast('这个条目超过 64 MB，解不到列表里', 'warn'); return; }
+      extracting = true;
+      const made = [];
+      let failed = 0;
+      try {
+        for (const item of picked) {
+          let data;
+          try { data = await DawnZip.readEntry(zip, item); } catch (e) { failed++; continue; }
+          made.push(await makeEntry(new File([data], item.name, { lastModified: Date.now(), type: '' })));
+        }
+      } finally {
+        extracting = false;
+      }
+      if (!made.length) { toast('一个也没解出来' + (failed ? '，' + failed + ' 个读取失败' : ''), 'warn'); return; }
+      state.files.push(...made);
+      renderRail();
+      if (made.length === 1) { select(made[0].id); return; }
+      const extra = files.length - made.length;
+      toast('解压 ' + made.length + ' 个文件到左侧列表' + (extra ? '，' + extra + ' 个超出上限' : ''));
+    };
+
     if (entry.category === 'document') {
       const docHost = el('div', 'doc-host');
       body.appendChild(docHost);
       await renderDocument(entry, zip, docHost);
+      tools.appendChild(button('解压全部', () => extract(zip.entries), 'btn--ghost', '把内部文件解到左侧列表'));
       state.viewer = { destroy: () => { } };
       return;
     }
@@ -601,6 +819,7 @@
     layout.appendChild(list);
     layout.appendChild(preview);
     body.appendChild(layout);
+    tools.appendChild(button('解压全部', () => extract(zip.entries), 'btn--ghost', '把条目解到左侧列表'));
 
     let activeRow = null;
     const showEntry = async (item) => {
@@ -615,6 +834,9 @@
         const head = el('div', 'zip-preview-head');
         head.appendChild(el('span', 'zip-preview-name', item.entry.name));
         head.appendChild(el('span', 'file-size', T.bytesText(item.entry.size)));
+        if (!/\/$/.test(item.entry.name)) {
+          head.appendChild(button('解压这条', () => extract([item.entry]), 'btn--ghost btn--sm'));
+        }
         preview.appendChild(head);
         if (isTextName(item.entry.name) && bytes.length < 4 * 1024 * 1024) {
           const decoded = T.decode(bytes);
@@ -823,11 +1045,19 @@
     $('#clear').addEventListener('click', () => {
       state.files = [];
       state.activeId = null;
+      state.about = false;
       teardown();
       renderRail();
       showEmpty();
     });
     $('#dropHint').addEventListener('click', () => $('#picker').click());
+    $('#aboutBtn').addEventListener('click', () => {
+      if (!state.about) { showAbout(); return; }
+      state.about = false;
+      if (state.files.length) select(state.files[0].id);
+      else { renderRail(); showEmpty(); }
+    });
+    $('#historyClear').addEventListener('click', clearHistory);
     const body = document.body;
     let depth = 0;
     body.addEventListener('dragenter', (e) => { e.preventDefault(); depth++; body.classList.add('is-dragging'); });
@@ -854,6 +1084,7 @@
     wire();
     renderRail();
     showEmpty();
+    loadHistory();
     if (window.NousPlugin && NousPlugin.ready) {
       NousPlugin.ready.then(() => { }).catch(() => { });
     }

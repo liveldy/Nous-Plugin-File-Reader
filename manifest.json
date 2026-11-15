@@ -1,15 +1,26 @@
 {
   "id": "app.nous.file-reader",
   "name": "破晓文件解析阅读器",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "api": "1.3",
   "requiresHost": "1.2.0",
-  "description": "一个窗口读完所有文件：文本、代码、Markdown、表格、配置、图像、音频、视频、压缩包、Office 文档、三维模型与二进制，能渲染、能改、能查。",
+  "description": "把文件拖进一个窗口，就地阅读、查看与修改。",
   "author": {
     "name": "Nelson",
     "url": "https://github.com/liveldy"
   },
   "changelog": [
+    {
+      "version": "1.1.0",
+      "publishedAt": "2026-11-16",
+      "changes": [
+        "HTML 有了阅读视图：按白名单重建版式，脚本、外链样式与远程资源一律丢弃，只留正文、表格、代码与内联图片。",
+        "压缩包可以解压：当前条目或全部条目解到左侧文件列表，再交给对应视图打开。",
+        "左侧新增「关于」：支持的类型与版本、接口与宿主版本都在一处。",
+        "打开过的文件进入「最近打开」，随宿主存储保留，可逐条删除或清空。",
+        "空状态与描述文案收敛。"
+      ]
+    },
     {
       "version": "1.0.0",
       "publishedAt": "2026-11-16",
@@ -21,8 +32,16 @@
       ]
     }
   ],
-  "platforms": ["web", "windows-x64", "android-arm64"],
-  "permissions": ["storage", "clipboard.write", "external.open"],
+  "platforms": [
+    "web",
+    "windows-x64",
+    "android-arm64"
+  ],
+  "permissions": [
+    "storage",
+    "clipboard.write",
+    "external.open"
+  ],
   "entry": "ui/index.html",
   "repository": "liveldy/Nous-Plugin-File-Reader",
   "license": "MIT",
@@ -36,7 +55,12 @@
   ],
   "defaultView": "reader",
   "requiredMethods": [],
-  "optionalMethods": ["storage.get", "storage.set", "clipboard.write", "external.open"],
+  "optionalMethods": [
+    "storage.get",
+    "storage.set",
+    "clipboard.write",
+    "external.open"
+  ],
   "resources": [
     "ui/index.html",
     "ui/style.css",
@@ -47,6 +71,7 @@
     "ui/lib/hl.js",
     "ui/lib/md.js",
     "ui/lib/structured.js",
+    "ui/lib/htmlview.js",
     "ui/lib/codeview.js",
     "ui/lib/image.js",
     "ui/lib/audio.js",

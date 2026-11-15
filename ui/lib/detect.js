@@ -175,5 +175,71 @@
     return '二进制';
   }
 
-  global.DawnDetect = { detect: detect, extOf: extOf, looksBinary: looksBinary, ascii: ascii };
+  /* 关于页用的能力清单：只说实际支持的格式与边界。 */
+  const CATALOG = [
+    {
+      title: '文本与代码',
+      items: [
+        ['纯文本', 'txt log text readme'],
+        ['Markdown', 'md markdown mdx'],
+        ['JSON', 'json jsonc'],
+        ['CSV / TSV', 'csv tsv psv'],
+        ['配置', 'ini toml yaml yml conf cfg properties env editorconfig'],
+        ['XML', 'xml plist xaml rss atom'],
+        ['HTML', 'html htm xhtml'],
+        ['源码', 'c cpp h js ts jsx tsx py rs go java kt swift cs php rb sh ps1 sql lua dart css scss less vue svelte'],
+      ],
+    },
+    {
+      title: '文档',
+      items: [
+        ['Word', 'docx docm'],
+        ['Excel', 'xlsx xlsm'],
+        ['演示文稿', 'pptx ppsx'],
+        ['PDF', 'pdf'],
+      ],
+    },
+    {
+      title: '压缩包',
+      items: [
+        ['ZIP', 'zip jar apk'],
+        ['其他容器', '7z rar gz tgz bz2 xz tar'],
+      ],
+    },
+    {
+      title: '图像',
+      items: [['位图', 'png jpg jpeg gif webp bmp ico tif tiff avif heic']],
+    },
+    {
+      title: '音频',
+      items: [['常见格式', 'wav mp3 flac ogg oga opus m4a aac aiff']],
+    },
+    {
+      title: '视频',
+      items: [
+        ['MP4 / MOV', 'mp4 m4v mov'],
+        ['其他容器', 'webm mkv avi wmv flv ts'],
+      ],
+    },
+    {
+      title: '三维与字体',
+      items: [
+        ['网格模型', 'stl obj ply glb gltf fbx 3mf dae'],
+        ['字体', 'ttf otf woff woff2'],
+      ],
+    },
+    {
+      title: '二进制',
+      items: [['任意文件', '签名解析与十六进制视图']],
+    },
+  ];
+
+  function catalog() {
+    return CATALOG.map((g) => ({
+      title: g.title,
+      items: g.items.map(([label, exts]) => ({ label: label, exts: exts })),
+    }));
+  }
+
+  global.DawnDetect = { detect: detect, extOf: extOf, looksBinary: looksBinary, ascii: ascii, catalog: catalog };
 })(typeof globalThis !== 'undefined' ? globalThis : window);
