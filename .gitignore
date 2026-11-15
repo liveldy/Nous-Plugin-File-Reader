@@ -1,0 +1,7 @@
+dist/
+build/
+node_modules/
+.taste-skill/
+sdk/examples/
+docs/shots/pdf.png
+docs/shots/video-2.png

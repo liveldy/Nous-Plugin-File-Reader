@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark" data-type="software" data-radius="sharp">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>破晓文件解析阅读器</title>
+<meta name="description" content="文本、代码、表格、图像、音频、视频、压缩包、模型与二进制，在同一个窗口里读、查、改。">
+<meta name="page-type" content="software">
+<meta name="site-kind" content="software">
+<meta name="theme-color" content="#0f0f0f">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18.5 9 6l3.6 7.4L15.2 6 20 18.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M7.4 14.4h9.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+    <h1 class="brand-name">破晓文件解析</h1>
+  </div>
+  <div class="topbar-actions">
+    <button class="btn btn--primary" id="pick" type="button">打开文件</button>
+    <button class="btn btn--ghost" id="clear" type="button" disabled>清空</button>
+  </div>
+</header>
+<main class="app">
+  <aside class="rail" aria-label="文件列表">
+    <div class="rail-head"><span id="railCount">没有文件</span></div>
+    <ul class="file-list" id="fileList"></ul>
+    <button class="rail-drop" id="dropHint" type="button">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L8 8m4-4 4 4M5 16v3.5h14V16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>拖入文件</span>
+    </button>
+  </aside>
+  <section class="stage" aria-label="阅读区">
+    <div class="stage-head" id="stageHead" hidden></div>
+    <div class="stage-body" id="stageBody"></div>
+  </section>
+</main>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<input type="file" id="picker" multiple hidden>
+<script src="nous-plugin.js"></script>
+<script src="lib/detect.js"></script>
+<script src="lib/text.js"></script>
+<script src="lib/hl.js"></script>
+<script src="lib/md.js"></script>
+<script src="lib/structured.js"></script>
+<script src="lib/codeview.js"></script>
+<script src="lib/image.js"></script>
+<script src="lib/audio.js"></script>
+<script src="lib/mp4.js"></script>
+<script src="lib/video.js"></script>
+<script src="lib/zip.js"></script>
+<script src="lib/model.js"></script>
+<script src="lib/pdf.js"></script>
+<script src="lib/binary.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

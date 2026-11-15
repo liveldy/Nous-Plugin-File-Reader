@@ -1,0 +1,17 @@
+{
+  "name": "nous-plugin-file-reader",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "description": "破晓文件解析阅读器 · Nous 插件。ui/ 是随包页面，sdk/ 是公开插件 SDK 的本地副本，tools/ 是预览与本机检查脚本。",
+  "scripts": {
+    "check": "node sdk/check.mjs .",
+    "pack": "node sdk/pack.mjs .",
+    "size": "node tools/assert-size.mjs",
+    "verify": "node sdk/check.mjs . && node tools/assert-size.mjs && node --test test/parsers.test.mjs",
+    "dev": "node sdk/dev.mjs .",
+    "preview": "node tools/serve.mjs",
+    "harness": "node tools/harness.mjs",
+    "test": "node test/parsers.test.mjs"
+  }
+}

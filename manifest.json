@@ -1,0 +1,63 @@
+{
+  "id": "app.nous.file-reader",
+  "name": "破晓文件解析阅读器",
+  "version": "1.0.0",
+  "api": "1.3",
+  "requiresHost": "1.2.0",
+  "description": "一个窗口读完所有文件：文本、代码、Markdown、表格、配置、图像、音频、视频、压缩包、Office 文档、三维模型与二进制，能渲染、能改、能查。",
+  "author": {
+    "name": "Nelson",
+    "url": "https://github.com/liveldy"
+  },
+  "changelog": [
+    {
+      "version": "1.0.0",
+      "publishedAt": "2026-11-16",
+      "changes": [
+        "首个版本：按魔数与扩展名识别文件，文本、代码、Markdown、表格、配置与结构化文档各有渲染视图。",
+        "编辑器带语法着色、行号、缩进与括号成对处理，以及关键字、片段和文中标识符的补全提示。",
+        "图像可缩放、旋转、镜像与矩形裁剪；音频解码成波形，可播放与圈选片段；视频用 WebCodecs 解码播放，可设入点出点。",
+        "压缩包列目录并预览条目，docx、xlsx、pptx 直接抽出正文；PDF 抽文本层；STL、OBJ、PLY、GLB 出统计与面片、点云预览；其余二进制给签名解析和十六进制视图。"
+      ]
+    }
+  ],
+  "platforms": ["web", "windows-x64", "android-arm64"],
+  "permissions": ["storage", "clipboard.write", "external.open"],
+  "entry": "ui/index.html",
+  "repository": "liveldy/Nous-Plugin-File-Reader",
+  "license": "MIT",
+  "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZGFmYTljIiBzdHJva2Utd2lkdGg9IjEuNyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNNCAxOC41IDkgNmwzLjYgNy40TDE1LjIgNiAyMCAxOC41Ii8+PHBhdGggZD0iTTcuNCAxNC40aDkuMiIvPjwvc3ZnPg==",
+  "navigation": [
+    {
+      "id": "reader",
+      "label": "文件解析",
+      "icon": "parse"
+    }
+  ],
+  "defaultView": "reader",
+  "requiredMethods": [],
+  "optionalMethods": ["storage.get", "storage.set", "clipboard.write", "external.open"],
+  "resources": [
+    "ui/index.html",
+    "ui/style.css",
+    "ui/app.js",
+    "ui/nous-plugin.js",
+    "ui/lib/detect.js",
+    "ui/lib/text.js",
+    "ui/lib/hl.js",
+    "ui/lib/md.js",
+    "ui/lib/structured.js",
+    "ui/lib/codeview.js",
+    "ui/lib/image.js",
+    "ui/lib/audio.js",
+    "ui/lib/mp4.js",
+    "ui/lib/video.js",
+    "ui/lib/zip.js",
+    "ui/lib/model.js",
+    "ui/lib/pdf.js",
+    "ui/lib/binary.js",
+    "ui/fonts/geist-latin.woff2",
+    "ui/fonts/geistmono-latin.woff2",
+    "ui/fonts/OFL.txt"
+  ]
+}
